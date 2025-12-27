@@ -6,27 +6,29 @@ import hashlib
 from flask import Flask, render_template, request, render_template_string, flash, redirect, url_for, session
 import time
 
+# Acabo de descubrir esta manera de hacer html y me da pereza hacer archivos aparte XD. Por cierto, el CSS me lo ha hecho Antigravity.
 index_template = """
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EN.AI - Quantum Interface</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    <title>EN.AI - ENEI PROJECT</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:ital,wght@0,400;1,700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-neon: #00f2ff;
-            --secondary-neon: #7000ff;
-            --bg-dark: #060b13;
-            --glass: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
+            --bg-black: #050505;
+            --smoke-light: rgba(200, 200, 200, 0.15);
+            --glow-text: rgba(255, 255, 255, 0.8);
+            --panel-alpha: rgba(10, 10, 10, 0.7);
         }
 
         body {
-            background: radial-gradient(circle at center, #101a26 0%, var(--bg-dark) 100%);
-            color: #e0e0e0;
-            font-family: 'Rajdhani', sans-serif;
+            background-color: var(--bg-black);
+            /* Fondo con gradiente radial para simular profundidad y humo */
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+            color: #d4d4d4;
+            font-family: 'Playfair Display', serif;
             margin: 0;
             display: flex;
             justify-content: center;
@@ -35,169 +37,173 @@ index_template = """
             overflow: hidden;
         }
 
-        .container {
-            width: 90%;
-            max-width: 850px;
-            height: 85vh;
-            background: var(--glass);
-            backdrop-filter: blur(15px);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 242, 255, 0.05);
-            position: relative;
-        }
-
-        /* Efecto de línea de escaneo superior */
-        .container::before {
+        /* Capa de humo animada (Efecto visual) */
+        body::before {
             content: "";
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 2px;
-            background: linear-gradient(90deg, transparent, var(--primary-neon), transparent);
-            animation: scan 3s linear infinite;
+            width: 200%; height: 200%;
+            background: url('https://www.transparenttextures.com/patterns/asfalt-dark.png');
+            opacity: 0.2;
+            animation: moveSmoke 60s linear infinite;
+            pointer-events: none;
         }
 
-        @keyframes scan { 0% { left: -100%; } 100% { left: 100%; } }
+        @keyframes moveSmoke {
+            from { transform: translate(-10%, -10%); }
+            to { transform: translate(0%, 0%); }
+        }
+
+        .container {
+            width: 95%;
+            max-width: 900px;
+            height: 90vh;
+            background: var(--panel-alpha);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+            z-index: 1;
+        }
 
         .chat-header {
-            padding: 20px;
+            padding: 40px 20px;
             text-align: center;
-            border-bottom: 1px solid var(--glass-border);
-            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .chat-header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
             margin: 0;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.5rem;
-            letter-spacing: 4px;
-            color: var(--primary-neon);
-            text-shadow: 0 0 10px var(--primary-neon);
+            letter-spacing: 8px;
+            color: #fff;
+            text-shadow: 0 0 15px var(--glow-text), 2px 2px 10px rgba(0,0,0,0.5);
+            text-transform: uppercase;
         }
 
-        .chat-header p { margin: 5px 0 0; font-size: 0.8rem; opacity: 0.6; text-transform: uppercase; }
+        .chat-header p {
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            letter-spacing: 4px;
+            opacity: 0.5;
+            margin-top: 10px;
+        }
 
         .chat-box {
             flex: 1;
             overflow-y: auto;
-            padding: 25px;
+            padding: 30px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            scrollbar-width: thin;
-            scrollbar-color: var(--primary-neon) transparent;
+            gap: 25px;
+            mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
         }
 
-        /* Estilo de los mensajes */
         .msg {
-            max-width: 75%;
-            padding: 15px 20px;
-            border-radius: 15px;
+            max-width: 70%;
+            padding: 15px 25px;
             position: relative;
-            font-size: 1.1rem;
-            animation: fadeIn 0.4s ease-out;
-            line-height: 1.4;
+            font-size: 1.05rem;
+            animation: fadeIn 0.8s ease-in-out;
+            border-left: 1px solid rgba(255,255,255,0.1);
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; filter: blur(5px); } to { opacity: 1; filter: blur(0); } }
+
+        .autor {
+            display: block;
+            font-family: 'Cinzel', serif;
+            font-size: 0.6rem;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+            color: var(--primary-neon);
+            opacity: 0.6;
+        }
 
         .user {
             align-self: flex-end;
-            background: linear-gradient(135deg, var(--secondary-neon), #4a00e0);
-            color: white;
-            border-bottom-right-radius: 2px;
-            box-shadow: 0 4px 15px rgba(112, 0, 255, 0.3);
+            text-align: right;
+            border-left: none;
+            border-right: 1px solid rgba(255,255,255,0.2);
+            background: linear-gradient(to left, rgba(255,255,255,0.03), transparent);
         }
 
         .ai {
             align-self: flex-start;
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid var(--glass-border);
-            color: #fff;
-            border-bottom-left-radius: 2px;
-        }
-
-        .autor {
-            display: block;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.65rem;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            opacity: 0.8;
+            background: linear-gradient(to right, rgba(255,255,255,0.03), transparent);
         }
 
         .input-form {
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 30px;
             display: flex;
-            gap: 15px;
-            border-top: 1px solid var(--glass-border);
+            background: rgba(0, 0, 0, 0.4);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         input[type="text"] {
             flex: 1;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--glass-border);
-            padding: 15px;
-            color: white;
-            border-radius: 10px;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            color: #fff;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
             outline: none;
-            transition: 0.3s;
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 1.1rem;
+            transition: 0.4s;
         }
 
         input[type="text"]:focus {
-            border-color: var(--primary-neon);
-            box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
+            border-bottom-color: #fff;
+            text-shadow: 0 0 5px var(--glow-text);
         }
 
         button {
             background: transparent;
-            border: 1px solid var(--primary-neon);
-            color: var(--primary-neon);
-            padding: 0 25px;
-            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 0 30px;
+            margin-left: 20px;
+            font-family: 'Cinzel', serif;
             cursor: pointer;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.8rem;
-            text-transform: uppercase;
             transition: 0.3s;
+            letter-spacing: 2px;
         }
 
         button:hover {
-            background: var(--primary-neon);
-            color: var(--bg-dark);
-            box-shadow: 0 0 20px var(--primary-neon);
+            background: #fff;
+            color: #000;
+            box-shadow: 0 0 20px #fff;
         }
 
         .logout-btn {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            color: #ff4b2b;
+            top: 20px; right: 20px;
+            color: rgba(255,255,255,0.3);
             text-decoration: none;
-            font-size: 0.8rem;
-            border: 1px solid #ff4b2b;
-            padding: 5px 10px;
-            border-radius: 5px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.6rem;
+            letter-spacing: 2px;
+            transition: 0.3s;
         }
 
-        /* Scrollbar Tuneada */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: var(--primary-neon); border-radius: 10px; }
+        .logout-btn:hover { color: #fff; }
+
+        /* Scrollbar invisible */
+        .chat-box::-webkit-scrollbar { width: 3px; }
+        .chat-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <a href="{{ url_for('logout') }}" class="logout-btn">DISCONNECT</a>
+    <a href="{{ url_for('logout') }}" class="logout-btn">TERMINAR SESIÓN</a>
     
     <div class="chat-header">
         <h1>EN.AI</h1>
-        <p>ENEI PROJECT // SYST_OP: {{ user }}</p>
+        <p>ENEI PROJECT // OPERADOR: {{ user }}</p>
     </div>
 
     <div class="chat-box" id="chatBox">
@@ -210,15 +216,14 @@ index_template = """
     </div>
 
     <form method="POST" class="input-form">
-        <input type="text" name="mensaje" placeholder="Awaiting input command..." required autofocus autocomplete="off">
-        <button type="submit">Execute</button>
+        <input type="text" name="mensaje" placeholder="Escribe al sistema..." required autofocus autocomplete="off">
+        <button type="submit">ENVIAR</button>
     </form>
 </div>
 
 <script>
-    // Auto-scroll al final del chat al cargar
-    const chatBox = document.getElementById('chatBox');
-    chatBox.scrollTop = chatBox.scrollHeight;
+    const cb = document.getElementById('chatBox');
+    cb.scrollTop = cb.scrollHeight;
 </script>
 
 </body>
@@ -242,8 +247,8 @@ def crear_chat():
     return client.chats.create(
         model="gemini-2.5-flash", 
         config={
-            "system_instruction": "Eres EN.AI, desarrollado por Raúl Salas Sahuquillo. Responde amigablemente en español.",
-            "tools": [{"google_search": {}}],
+            "system_instruction": "Eres EN.AI, una IA desarrollada por el estudio personal de ENEI PROJECT que pertenece al desarrollador Raúl Salas Sahuquillo. Responde de manera útil, amigable y profesional. Habla en español.",
+            "tools": [{"google_search": {}}], # Herramienta para Google Serch
         }
     )
 
@@ -267,7 +272,7 @@ init_db() # Llamamos a la función al arrancar
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# --- PLANTILLAS HTML (Incrustadas para el ejemplo) ---
+# HTML simple para login y registro
 login_template = """
 <!DOCTYPE html>
 <html>
@@ -306,7 +311,7 @@ register_template = """
 </html>
 """
 
-# --- RUTAS ---
+# RUTAS
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -351,7 +356,7 @@ def home():
     if request.method == 'POST':
         user_message = request.form.get("mensaje")
         if user_message:
-            try:
+            try:                          # Lol, no sabía que iba ya por la línea 300
                 response = chat_session.send_message(user_message)
                 historial.append({"autor": "Tú", "texto": user_message})
                 historial.append({"autor": "EN.AI", "texto": response.text})
@@ -363,7 +368,7 @@ def home():
                 historial.append({"autor": "Sistema", "texto": f"Error: {e}"})
         return render_template_string(index_template, chat=historial, user=session["username"])
     
-    # Si es GET (Recarga), reiniciamos el chat como pediste antes
+    # Si es GET (Recarga), reiniciamos el chat
     historial = []
     chat_session = crear_chat()
     return render_template_string(index_template, chat=historial, user=session["username"])
