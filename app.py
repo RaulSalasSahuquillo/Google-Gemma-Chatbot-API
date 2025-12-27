@@ -5,6 +5,7 @@ import sqlite3
 import hashlib
 from flask import Flask, render_template, request, render_template_string, flash, redirect, url_for, session
 import time
+import markdown
 
 # Acabo de descubrir esta manera de hacer html y me da pereza hacer archivos aparte XD. Por cierto, el CSS me lo ha hecho Antigravity.
 index_template = """
@@ -210,7 +211,7 @@ index_template = """
         {% for msg in chat %}
             <div class="msg {% if msg.autor == 'Tú' %}user{% else %}ai{% endif %}">
                 <span class="autor">{{ msg.autor }}</span>
-                {{ msg.texto }}
+                {{ msg.texto | safe }}
             </div>
         {% endfor %}
     </div>
@@ -358,8 +359,9 @@ def home():
         if user_message:
             try:                          # Lol, no sabía que iba ya por la línea 300
                 response = chat_session.send_message(user_message)
-                historial.append({"autor": "Tú", "texto": user_message})
-                historial.append({"autor": "EN.AI", "texto": response.text})
+                historial.append({"autor": "Tú", "texto": user_message}) # Mensaje del usuario
+                texto_md = markdown.markdown(response.text) # Convertir a Markdown para que se vea mejor en el output
+                historial.append({"autor": "EN.AI", "texto": texto_md}) # Respuesta de la IA
             except Exception as e:
                 if "429" in str(e): # El error 429 indica límite de tokens. Cuando aparece toca cambiar de api key.
                     error_msg = "Límite de tasa alcanzado. Por favor, espera un momento antes de continuar."
